@@ -1,11 +1,6 @@
-import django
+from django.conf.urls import url
+from webtopay.views import mikro
 
-if django.VERSION >= (1, 6):
-    from django.conf.urls import patterns, url
-else:
-    from django.conf.urls.defaults import patterns, url
-
-
-urlpatterns = patterns('webtopay.views',
-    url(r'^$', 'mikro', name="webtopay-mikro"),
-)
+urlpatterns = [
+    url(r'^$', mikro, name="webtopay-mikro")
+]
