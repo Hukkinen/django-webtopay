@@ -26,7 +26,7 @@ from django.core.exceptions import ValidationError
 from webtopay.cert import pem as cert_pem
 from webtopay.widgets import ValueHiddenInput
 from webtopay.models import WebToPayResponse
-from webtopay.conf import WTP_PASSWORD, CHECK_SS1, CHECK_SS2, POSTBACK_ENDPOINT
+from webtopay.conf import WTP_PASSWORD, CHECK_SS1, CHECK_SS2, POSTBACK_ENDPOINT, WEBTOPAY_SUBMIT_TARGET_BLANK
 
 log = logging.getLogger(__name__)
 
@@ -282,8 +282,10 @@ class WebToPaymentForm(forms.Form):
         if self.is_valid():
             self.sign_with_password()
             return mark_safe(
-                    u'<form action="%s" method="post" target="_blank">%s%s'\
-                            '</form>' % (POSTBACK_ENDPOINT, self.as_p(),
+                    u'<form action="%s" method="post" %s>%s%s'\
+                            '</form>' % (POSTBACK_ENDPOINT,
+                                ' target="_blank"' if SUBMIT_TARGET_BLANK else "",
+                                self.as_p(),
                                 self.button_html))
         else:
             raise ValidationError(u"Errors " + self.errors.as_text())
