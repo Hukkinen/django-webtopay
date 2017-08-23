@@ -34,7 +34,7 @@ class WebToPayResponse(models.Model):
                     "mokėjimai.lt nepalaiko bus parinkta kalba pagal "+\
                     "lankytojo IP adresą arba anglų kalba pagal nutylėjimą. "+\
                     "(LIT, LAV, EST, RUS, ENG, GER, POL)")
-    amount = models.BigIntegerField(null=True,
+    amount = models.FloatField(null=True,
             help_text="Suma centais, kurią klientas turi apmokėti")
     currency = models.CharField(max_length=3,
             help_text="Mokėjimo valiuta (LTL, USD, EUR), kuria pageidaujate, "+\

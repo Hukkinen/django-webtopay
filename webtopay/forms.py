@@ -99,7 +99,7 @@ class WebToPaymentForm(forms.Form):
             "adresą arba anglų kalba pagal nutylėjimą "\
             "(LIT, LAV, EST, RUS, ENG, GER, POL)")
 
-    amount = forms.IntegerField(required=False,
+    amount = forms.FloatField(required=False,
             widget=ValueHiddenInput(),
             help_text="Suma centais, kurią klientas turi apmokėti")
 
@@ -282,7 +282,7 @@ class WebToPaymentForm(forms.Form):
         if self.is_valid():
             self.sign_with_password()
             return mark_safe(
-                    u'<form action="%s" method="post" %s>%s%s'\
+                    u'<form action="%s" name="purchase_form" method="post" %s>%s%s'\
                             '</form>' % (POSTBACK_ENDPOINT,
                                 ' target="_blank"' if SUBMIT_TARGET_BLANK else "",
                                 self.as_p(),
