@@ -13,7 +13,11 @@ setup(
     url='https://github.com/Motiejus/django-webtopay',
     install_requires=['Django>=1.3', 'pyopenssl'],
     description = 'A pluggable Django application for integrating WebToPay Payments',
-    packages=find_packages(),
+    packages=[
+        'webtopay',
+        'webtopay.migrations',
+        'webtopay.urls',
+    ],
     classifiers=[
         "Framework :: Django",
         "Intended Audience :: Developers",
