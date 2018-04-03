@@ -7,20 +7,16 @@ from django.test.client import Client
 
 from webtopay.forms import WebToPayResponseForm
 from webtopay.signals import payment_was_successful, payment_was_flagged
+from django.urls import reverse
 
 # query string from libwebtopay tests
-query = 'wp_projectid=13156&wp_orderid=1&wp_lang=lit&wp_amount=10000&wp_curre'\
-        'ncy=LTL&wp_payment=maximalt&wp_country=LT&wp_p_firstname=Vardenis&wp'\
-        '_p_lastname=Pavardenis&wp_p_email=m.sprunskas%40evp.lt&wp_p_street=M'\
-        '%C4%97nulio+g.7&wp_p_city=Vilnius&wp_test=1&wp_version=1.4&wp_type=E'\
-        'MA&wp_paytext=U%C5%BEsakymas+nr%3A+1+http%3A%2F%2Ftest-project.local'\
-        '+projekte.+%28Pardav%C4%97jas%3A+Libwebtopay+Libwebtopay%29+%2813156'\
-        '%29&wp_receiverid=168328&wp__ss1=c72cffd0345f55fef6595a86e5c7caa6&wp'\
-        '_status=1&wp_requestid=16309376&wp_name=&wp_surename=&wp_payamount=1'\
-        '0000&wp_paycurrency=LTL&wp__ss2=oSiHSlnin%2FSSJ7bGaTWZybtHzA6%2FNaZc'\
-        'PtS3f07KZMoTeJteL6rnuw7qfT%2FACGW5Hifu2ieNnCBpu2XLnsR10Ja8%2FxVM5X7j'\
-        '2mg9wBOO1Y0cefKBSBlFoZjLL2ciV32ETCD4Okxv2l%2FwH8tQhDQnJ6AOJkbh2ayKy8'\
-        'yTXOcE1zk%3D'
+query = 'data=cHJvamVjdGlkPTExNDQyMyZvcmRlcmlkPXJlc2VydmF0aW9uLTgmYW1vdW50PTk4OSZwYXl0ZXh0PVUlQzUlQkVzYWt5bWFzK25yJTNBK' \
+        '3Jlc2VydmF0aW9uLTgraHR0cCUzQSUyRiUyRmxvY2FsaG9zdCtwcm9qZWt0ZS4rJTI4UGFyZGF2JUM0JTk3amFzJTNBK1ZpZG1hbnRhcytaZW1' \
+        'sZXJpcyUyOSZwX2ZpcnN0bmFtZT12aWRtYW50YXMmcF9sYXN0bmFtZT16ZW1sZXJpcyZwX2VtYWlsPXZpZG1hbnRhcy56ZW1sZXJpcyU0MGdtY' \
+        'WlsLmNvbSZ0ZXN0PTEmbGFuZz1saXQmcGF5bWVudD1oYW56YSZjdXJyZW5jeT1FVVImY291bnRyeT1MVCZzdGF0dXM9MSZyZXF1ZXN0aWQ9MTc' \
+        'zNzQzMDI5JnBheWFtb3VudD05ODkmcGF5Y3VycmVuY3k9RVVSJnZlcnNpb249MS42' \
+        '&ss1=fd20a462c71de41ca0e8eca4ff2a7ee8' \
+        '&ss2=V2BuLkejRhjvs03PDMYQdiMVEff6YDq2l3gI2g2bwtiJCfxPq1CuiZTiAi_ajQ5YfA6ixFNMGiI2wYl8ewXS0XkcCUEuCJqfkdb_LbNtNZQH4-z5fBpaqm2hTEO1-nrH4tHiah-ouQyEjuTty_dInY7ar2zW71sEaIzmKDDN55o%3D'
 
 class TestVerifications(TestCase):
     def testSS1(self):
@@ -32,12 +28,12 @@ class TestVerifications(TestCase):
         self.assertTrue(form.check_ss2())
 
     def testSS1Fail(self):
-        query2 = query.replace("c72cffd0345f55fef6595a86e5c7caa6", "bad")
+        query2 = query.replace("fd20a462c71de41ca0e8eca4ff2a7ee8", "bad")
         form = WebToPayResponseForm(query2)
         self.assertFalse(form.check_ss1())
 
     def testSS2Fail(self):
-        query2 = query.replace('FxVM5X7j2mg9w', 'FxVM5X7j2mg9w'.swapcase())
+        query2 = query.replace('V2BuLkejRhjvs', 'V2BuLkejRhjvs'.swapcase())
         form = WebToPayResponseForm(query2)
         self.assertFalse(form.check_ss2())
 
@@ -51,7 +47,7 @@ class TestSignals(TestCase):
             self.got_signal = True
             self.signal_obj = sender
         payment_was_successful.connect(handle_signal)
-        resp = self.client.get("?" + query)
+        resp = self.client.get(reverse('webtopay-makro') + "?" + query)
         self.assertTrue(self.got_signal)
 
     def testBadSS1(self):
@@ -61,7 +57,7 @@ class TestSignals(TestCase):
             self.signal_obj = sender
         payment_was_flagged.connect(handle_signal)
         query2 = query.replace("c72cffd0345f55fef6595a86e5c7caa6", "bad")
-        resp = self.client.get("?" + query2)
+        resp = self.client.get(reverse('webtopay-makro') + "?" + query2)
         self.assertTrue(self.got_signal)
 
     def testBadSS2(self):
@@ -71,7 +67,7 @@ class TestSignals(TestCase):
             self.signal_obj = sender
         payment_was_flagged.connect(handle_signal)
         query2 = query.replace('FxVM5X7j2mg9w', 'FxVM5X7j2mg9w'.swapcase())
-        resp = self.client.get("?" + query2)
+        resp = self.client.get(reverse('webtopay-makro') + "?" + query2)
         self.assertTrue(self.got_signal)
 
     def testBadProcessing(self):
@@ -83,6 +79,6 @@ class TestSignals(TestCase):
         logger = logging.getLogger('webtopay.views')
         old_level = logger.level
         logger.setLevel(100)
-        resp = self.client.get("?" + query)
+        resp = self.client.get(reverse('webtopay-makro') + "?" + query)
         logger.setLevel(old_level)
         self.assertEqual(str("OK"), str(resp.content.decode('utf-8')))

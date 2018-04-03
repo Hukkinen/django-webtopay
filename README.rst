@@ -13,6 +13,11 @@ How to use
    (it should be relatively hard to guess)
 4. Create a form for submission::
 
+    if request.GET.get('data'):
+        # if redirected back from paysera with 'data' param we should not use WebToPaymentForm
+        return render(request, 'reservations/pay_result.html', {
+        })
+
     form = WebToPaymentForm(
         dict(projectid = 123123,
             orderid = '3c3662bcb661d6de679c636744c66b62',
@@ -28,6 +33,11 @@ How to use
             ),
         button_html="<input type='submit' value='Pay!'/>",
     )
+
+    return render(request, 'reservations/pay_form.html', {
+        'form': form
+    })
+
 
 5) Catch a django signal when the payment is completed::
 

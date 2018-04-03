@@ -43,6 +43,12 @@ class WebToPayResponseForm(forms.ModelForm):
         for key, value in data.items():
             data_trim[re.sub('^wp_', '', key)] = value
 
+        # Decode base64 encoded 'data' into fields
+        urlencoded_params = base64.urlsafe_b64decode(bytearray(data['data'], 'utf-8')).decode('utf8')
+        data_decoded = OrderedDict(parse_qsl(urlencoded_params, keep_blank_values=True))
+        for key, value in data_decoded.items():
+            data_trim[key] = value
+
         super(WebToPayResponseForm, self).__init__(data_trim, **kargs)
 
     def badly_authorizes(self):
@@ -53,23 +59,16 @@ class WebToPayResponseForm(forms.ModelForm):
         return False
 
     def check_ss1(self):
-        fields = [WTP_PASSWORD, self.data['orderid'], self.data['test'], '1']
-        ss1 = Helpers.generate_ss1(fields, "|")
-        if ss1 != self.data['_ss1']:
+        fields = [self.data['data'], WTP_PASSWORD]
+        ss1 = Helpers.generate_ss1(fields, "")
+        if ss1 != self.data['ss1']:
             return False
         return True
 
     def check_ss2(self):
-        """ from libwebtopay:
-        openssl_verify($_SS2, base64_decode($response['_ss2']), $pKeyP);
-        foreach ($response as $key => $value) {
-            if ($key!='_ss2') $_SS2 .= "{$value}|";
-        }
-        """
-        fields = self.data.copy()
-        sig = base64.decodestring(bytearray(fields.pop('_ss2'), 'utf-8'))
+        sig = base64.urlsafe_b64decode(bytearray(self.data['ss2'], 'utf-8'))
 
-        verify_msg = "|".join(fields.values()) + "|"
+        verify_msg = self.data['data']
 
         pem = OpenSSL.crypto.load_certificate(
             OpenSSL.crypto.FILETYPE_PEM,
@@ -266,7 +265,7 @@ class WebToPaymentForm(forms.Form):
                     "projekto) -> \"Leisti testinius mokėjimus\" (pažymėkite)")
 
     version = forms.CharField(max_length=9, required=False,
-            initial="1.4",
+            initial="1.6",
             widget=ValueHiddenInput(),
             help_text="Mokėjimai.lt mokėjimų sistemos specifikacijos (API) "\
                     "versijos numeris")
@@ -278,9 +277,9 @@ class WebToPaymentForm(forms.Form):
         super(WebToPaymentForm, self).__init__(*args, **kargs)
 
     def render(self):
-        # Create a signed password
+        # Create a signed password and encode whole form into a single 'data' field
         if self.is_valid():
-            self.sign_with_password()
+            self.sign_with_password_v1_6()
             return mark_safe(
                     u'<form action="%s" name="purchase_form" method="post" %s>%s%s'\
                             '</form>' % (POSTBACK_ENDPOINT,
@@ -290,7 +289,7 @@ class WebToPaymentForm(forms.Form):
         else:
             raise ValidationError(u"Errors " + self.errors.as_text())
 
-    def sign_with_password(self): # Signs self with password
+    def sign_with_password_v1_4(self): # Signs self with password
         # To be encrypted
         fields = ['projectid', 'orderid', 'lang', 'amount', 'currency',
                 'accepturl', 'cancelurl', 'callbackurl', 'payment', 'country',
@@ -298,6 +297,16 @@ class WebToPaymentForm(forms.Form):
                 'p_state', 'p_zip', 'p_countrycode', 'test', 'version']
         vals = [self.cleaned_data[k] for k in fields] + [WTP_PASSWORD]
         self.data.update({'sign' : Helpers.generate_ss1(vals, u'')})
+        self.clean() # Propagate field "sign"
+
+    def sign_with_password_v1_6(self): # Signs self with password
+        import urllib
+        vals = [(k, v) for k, v in self.cleaned_data.items() if v]
+        url_encoded = urllib.parse.urlencode(vals)
+        base64enc = base64.urlsafe_b64encode(url_encoded.encode('utf-8'))
+        send_data = base64enc.decode('utf8')
+        to_hash = [send_data, WTP_PASSWORD]
+        self.data = {'sign' : Helpers.generate_ss1(to_hash, u''), 'data': send_data}
         self.clean() # Propagate field "sign"
 
 
